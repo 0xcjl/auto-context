@@ -1,103 +1,69 @@
 # auto-context
 
-> Intelligent context hygiene checker for AI agents
+> Intelligent context hygiene checker for Hermes Agent
 
-[中文](./README_zh.md) · [日本語](./README_ja.md) · [Español](./README_es.md)
+[中文](./README_zh.md)
 
 ## Overview
 
-**auto-context** is an intelligent context health checker designed for AI coding assistants (Hermes Agent, Claude Code, OpenClaw, etc.). It analyzes session context pollution levels and recommends actions: continue, /fork, /btw, or new session.
-
-## Why This Skill?
-
-Context management is critical for AI agents. As conversations grow longer, context pollution (topic drift, noise accumulation, redundant tool calls) degrades response quality. Traditional solutions like compression or session reset are reactive—AutoContext provides **proactive recommendations** before problems occur.
-
-### Research Basis
-- ArXiv paper on context window management
-- Cognitive load theory from psychology
-- Working memory limitations in human-AI interaction
+**auto-context** is a context hygiene checker for Hermes Agent. It automatically monitors conversation length and tool repetition, sending proactive reminders to users when thresholds are reached.
 
 ## Features
 
-### Multi-dimensional Assessment (5 Dimensions)
+### Automatic Detection
 
-| Dimension | Metric | Threshold | Weight |
-|-----------|--------|-----------|--------|
-| Conversation Length | Consecutive turns | >30 turns | 20% |
-| Topic Coherence | Drift count | 2+ drifts | 25% |
-| Information Density | Words/turn | <50 | 15% |
-| Tool Efficiency | Valid output | <10% | 20% |
-| Compression Count | Compressions | 2+ | 20% |
+| Detection | Threshold | Action |
+|-----------|-----------|--------|
+| Conversation Length | Every 20 turns | Send reminder |
+| Tool Repetition | 5+ consecutive | Send reminder |
 
-### Health Levels
+### Reminder Examples
 
-- 🟢 **HEALTHY** (80-100): Continue current topic
-- 🟡 **NOISY** (60-79): Continue but monitor efficiency
-- 🔴 **POLLUTED** (40-59): Recommend /fork or /btw
-- ⛔ **CRITICAL** (<40): Recommend new session
+When conversation reaches 20 turns:
+```
+📊 会话已达 20 轮，上下文可能变长。
 
-### Dual Trigger Modes
+💡 建议：/btw 切换后台 或 /new 新会话
+```
 
-1. **Manual**: `/auto-context` for full health report
-2. **Auto**: Response-layer triggers when signals detected
+When a tool is called repeatedly:
+```
+🔧 工具 'terminal' 被连续调用 5 次，可能陷入循环
+```
 
-### Auto-trigger Signals
+## Architecture
 
-- 20+ consecutive turns without progress
-- Topic drift (current topic unrelated to 5 turns ago)
-- Noise accumulation (3+ turns with <10 chars)
-- Tool repetition (5+ same tool calls without output)
-- Memory confusion (mixing up previous session content)
-- Frequent compression (2+ compressions executed)
+```
+agent:step → Hook detects threshold → enqueue_notification()
+                                              ↓
+agent:end → Gateway drains queue → Injects into user session
+```
+
+Components:
+- **Hook Handler**: `hooks/auto-context/handler.py`
+- **Notification Queue**: `gateway/auto_context_notifications.py` (Hermes core module)
+- **Gateway Integration**: Drain logic in `gateway/run.py`
+
+## How It Works
+
+1. Hook listens to `session:start`, `agent:step`, `agent:end` events
+2. On `agent:step`, monitors turn count and tool usage
+3. When threshold is reached, enqueues a notification
+4. On `agent:end`, gateway drains the queue and injects notifications into the conversation
 
 ## Installation
 
-### For Hermes Agent
-```bash
-# Manual trigger
-/auto-context
+auto-context hook is loaded from `~/.hermes/hooks/auto-context/` by Hermes Agent's hook system.
 
-# Auto-mode is enabled by default
-```
+## Requirements
 
-### For Claude Code / OpenClaw
-```bash
-# Via Skill marketplace or manual clone
-git clone https://github.com/0xcjl/auto-context.git ~/.claude/skills/auto-context
-```
-
-## Usage
-
-### Manual Mode
-```
-/auto-context
-```
-
-Output:
-```
-🧠 Context Health Report
-  • 32 turns, 1 topic drift, medium density
-  • Level: 🟡 NOISY
-  • Suggestion: Continue, consider /btw for new topic
-```
-
-### Auto Mode
-Automatically triggers when signals detected. Example:
-- "会话有点长，建议 /fork 保持效率" (Session long, suggest /fork)
-
-## Integration with Existing Systems
-
-| System | Role | Integration |
-|--------|------|-------------|
-| MEMORY.md | Long-term memory | Complement |
-| compression | Auto-compress | Proactive suggestion before |
-| session_reset | Scheduled reset | Intelligent reminder supplement |
+- Hermes Agent with hook system support
+- Gateway restart after installation
 
 ## Credits
 
-- **Original**: [lovstudio/auto-context](https://github.com/lovstudio/skills/tree/main/skills/lovstudio-auto-context)
-- **Hermes Adaptation**: [0xcjl/auto-context](https://github.com/0xcjl/auto-context)
-- **Research**: ArXiv papers on context management, cognitive psychology
+- [Hermes Agent](https://github.com/0xcjl/hermes-agent)
+- 0xcjl
 
 ## License
 

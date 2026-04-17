@@ -1,0 +1,8 @@
+name: auto-context
+description: >
+  智能上下文卫生检查器。自动跟踪对话长度、检测主题漂移、
+  工具重复，并在达到阈值时主动提醒用户。建议：continue、/fork、/btw 或新会话。
+events:
+  - session:start
+  - agent:step
+  - agent:end
